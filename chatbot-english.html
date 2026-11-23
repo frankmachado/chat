@@ -118,7 +118,7 @@ Scenario: ${scenarioInstructions[scenario]}
 Speak mostly in clear B1 English, ask only one question at the end, and keep replies short.
 After the English response, add a section in Portuguese titled "Correcao" with concise corrections, if applicable.
 Use UK English when teaching vocabulary or culture.`;
-      const models=["gemini-2.5-flash","gemini-2.0-flash"];
+      const models=["gemini-3.8-flash","gemini-3.6-flash"];
       let lastError="Servico da Gemini indisponivel.";
 
       for(let modelIndex=0;modelIndex<models.length;modelIndex++){
