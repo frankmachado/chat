@@ -118,43 +118,61 @@ Scenario: ${scenarioInstructions[scenario]}
 Speak mostly in clear B1 English, ask only one question at the end, and keep replies short.
 After the English response, add a section in Portuguese titled "Correcao" with concise corrections, if applicable.
 Use UK English when teaching vocabulary or culture.`;
-      const modelUrl="https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent";
-      for(let attempt=1;attempt<=3;attempt++){
-        try{
-          const response=await fetch(modelUrl,{
-            method:"POST",
-            headers:{
-              "Content-Type":"application/json",
-              "x-goog-api-key":key
-            },
-            body:JSON.stringify({
-              systemInstruction:{parts:[{text:systemInstruction}]},
-              contents:chatHistory,
-              generationConfig:{temperature:.7,maxOutputTokens:450}
-            })
-          });
-          if(!response.ok){
-            const error=await response.json().catch(()=>null);
-            const message=error?.error?.message||`Gemini request failed (${response.status})`;
-            if((response.status===429||response.status===503)&&attempt<3){
-              $("#chatFeedback").textContent=`Gemini ocupada. Nova tentativa ${attempt+1} de 3...`;
-              await new Promise(resolve=>setTimeout(resolve,attempt*3000));
-              continue;
+      const models=["gemini-2.5-flash","gemini-2.0-flash"];
+      let lastError="Servico da Gemini indisponivel.";
+
+      for(const model of models){
+        const modelUrl=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+        for(let attempt=1;attempt<=3;attempt++){
+          try{
+            const response=await fetch(modelUrl,{
+              method:"POST",
+              headers:{
+                "Content-Type":"application/json",
+                "x-goog-api-key":key
+              },
+              body:JSON.stringify({
+                systemInstruction:{parts:[{text:systemInstruction}]},
+                contents:chatHistory,
+                generationConfig:{temperature:.7,maxOutputTokens:450}
+              })
+            });
+            if(!response.ok){
+              const error=await response.json().catch(()=>null);
+              const message=error?.error?.message||`Gemini request failed (${response.status})`;
+              lastError=message;
+
+              if((response.status===429||response.status===503)&&attempt<3){
+                $("#chatFeedback").textContent=`Gemini ocupada. Nova tentativa ${attempt+1} de 3...`;
+                await new Promise(resolve=>setTimeout(resolve,attempt*3000));
+                continue;
+              }
+
+              if(response.status===404||response.status===400){
+                break;
+              }
+              if(attempt<3){
+                await new Promise(resolve=>setTimeout(resolve,attempt*2000));
+                continue;
+              }
+              break;
             }
-            throw new Error(message);
-          }
-          const data=await response.json();
-          const reply=data.candidates?.[0]?.content?.parts?.map(part=>part.text||"").join("").trim();
-          if(!reply) throw new Error("Gemini returned an empty response.");
-          chatHistory.push({role:"model",parts:[{text:reply}]});
-          return reply;
-        }catch(error){
-          if(attempt===3){
-            chatHistory.pop();
-            return `Nao consegui conectar a Gemini: ${error.message}`;
+            const data=await response.json();
+            const reply=data.candidates?.[0]?.content?.parts?.map(part=>part.text||"").join("").trim();
+            if(!reply) throw new Error("Gemini returned an empty response.");
+            chatHistory.push({role:"model",parts:[{text:reply}]});
+            return reply;
+          }catch(error){
+            lastError=error.message;
+            if(attempt<3){
+              await new Promise(resolve=>setTimeout(resolve,attempt*2000));
+            }
           }
         }
+        $("#chatFeedback").textContent=`Tentando modelo alternativo ${model}...`;
       }
+      chatHistory.pop();
+      return `Nao consegui conectar a Gemini: ${lastError}`;
     }
     function correctText(text){
       const rules=[
