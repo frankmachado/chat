@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Roteiro de Ingles - Mes 1</title>
+  <style>
+    :root { --ink:#172033; --muted:#65708a; --brand:#635bff; --brand2:#13a9a1; --bg:#f4f6fb; --card:#fff; --line:#dde3ef; --done:#dff7ed; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:var(--bg); }
+    header { position:sticky; top:0; z-index:10; background:rgba(244,246,251,.94); backdrop-filter:blur(12px); border-bottom:1px solid var(--line); }
+    .top { max-width:1080px; margin:auto; padding:18px 20px 14px; display:flex; align-items:center; gap:24px; }
+    h1 { margin:0; font-size:clamp(20px,3vw,32px); }
+    .progress-wrap { flex:1; max-width:420px; margin-left:auto; }
+    .progress-label { display:flex; justify-content:space-between; font-size:13px; font-weight:800; margin-bottom:7px; }
+    progress { width:100%; height:10px; border:0; border-radius:20px; overflow:hidden; }
+    progress::-webkit-progress-bar { background:#dfe5f2; } progress::-webkit-progress-value { background:linear-gradient(90deg,var(--brand),var(--brand2)); }
+    main { max-width:1080px; margin:auto; padding:24px 20px 60px; }
+    .week { margin:0 0 22px; background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden; box-shadow:0 10px 30px rgba(23,32,51,.06); }
+    .week summary { cursor:pointer; list-style:none; padding:20px 22px; display:flex; align-items:center; gap:14px; }
+    .week summary::-webkit-details-marker { display:none; }
+    .week-badge { width:42px; height:42px; border-radius:12px; display:grid; place-items:center; background:#eeefff; color:#4d46d8; font-weight:900; }
+    .week-title { flex:1; } .week-title h2 { margin:0 0 4px; font-size:20px; } .week-title p { margin:0; color:var(--muted); }
+    .chevron { transition:.2s; } details[open] .chevron { transform:rotate(180deg); }
+    .week-body { border-top:1px solid var(--line); padding:20px 22px 22px; }
+    .overview { display:grid; grid-template-columns:1fr 1.4fr; gap:16px; margin-bottom:18px; }
+    .box { background:#f8f9fd; border:1px solid var(--line); border-radius:13px; padding:14px; }
+    .box h3 { margin:0 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+    .vocab { line-height:1.7; font-size:14px; }
+    .days { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
+    .day { border:1px solid var(--line); border-radius:12px; background:#fff; overflow:hidden; }
+    .day-head { width:100%; border:0; background:transparent; padding:12px 8px; cursor:pointer; text-align:center; font-weight:800; color:var(--ink); }
+    .day.done { background:var(--done); border-color:#a9dec9; }
+    .day.done .day-head { color:#147353; }
+    .day-details { display:none; padding:0 10px 12px; font-size:13px; line-height:1.45; }
+    .day.open .day-details { display:block; }
+    .day-details strong { display:block; margin:6px 0 2px; }
+    .complete { width:100%; border:1px solid #b7c1d4; border-radius:8px; background:#fff; padding:7px 4px; cursor:pointer; font-weight:800; }
+    .day.done .complete { border-color:#69bd9e; color:#147353; }
+    @media(max-width:760px) { .overview { grid-template-columns:1fr; } .days { grid-template-columns:1fr 1fr; } }
+    @media(max-width:420px) { .top { align-items:flex-start; flex-direction:column; } .progress-wrap { width:100%; max-width:none; } .days { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top">
+      <h1>Roteiro de Ingles</h1>
+      <div class="progress-wrap">
+        <div class="progress-label"><span>Progresso geral</span><span id="percent">0%</span></div>
+        <progress id="progress" value="0" max="28"></progress>
+      </div>
+    </div>
+  </header>
+  <main id="app"></main>
+  <script>
+    const weeks = [
+      {title:"Apresentacoes e small talk", grammar:"Present simple and present continuous", vocab:["introduce","colleague","team","role","responsibility","workplace","client","meeting","schedule","agenda","available","free time","weekend","interested","experience","background","company","department","manager","remote","hybrid","contact","network","conversation","topic","question","answer","greeting","hello","nice to meet you","pleased","where","from","Brazil","Ceara","work","currently","busy","project","challenge","goal","priority","support","product","solution","customer","account","prospect","lead","call","email","follow up","portfolio","channel","communication","SMS","RCS","platform","Zoug","metrics","manage","send","receive","report","performance","update","share","discuss","agree","understand","prefer","usually","sometimes","today","tomorrow","this week","next week","enjoy","favorite","sports","football","music","cooking","series","travel"], resources:"BBC Learning English - Learn English in 30 Minutes; YouTube: How to make small talk", activity:"Aprenda o tema por contexto e repita frases completas em voz alta."},
+      {title:"Comida e culinaria", grammar:"Countable and uncountable nouns; some/any", vocab:["ingredient","recipe","dish","meal","breakfast","lunch","dinner","snack","spice","flavor","taste","sweet","salty","spicy","bitter","sour","fresh","frozen","raw","cooked","grilled","fried","baked","boiled","chop","slice","mix","stir","pour","season","taste","serve","portion","order","menu","restaurant","kitchen","chef","waiter","table","reservation","bill","recommend","delicious","hungry","thirsty","water","rice","beans","meat","fish","chicken","vegetable","fruit","bread","cheese","egg","salt","pepper","oil","onion","garlic","plate","bowl","cup","glass","oven","pan","knife","minute","temperature","ready","enough","a little","a lot","some","any","much","many","how much","how many","shopping","grocery","market","buy","cook","eat","try","share","recipe","traditional","african","british"], resources:"BBC Good Food; Jamie Oliver; Gordon Ramsay; Language Reactor", activity:"Assista a uma receita curta e reconte os passos em cinco frases."},
+      {title:"Futebol: contando o jogo", grammar:"Past simple and past continuous", vocab:["match","game","club","team","supporter","fan","goal","score","win","lose","draw","player","coach","manager","captain","goalkeeper","striker","midfielder","defender","forward","pass","cross","shoot","save","tackle","foul","yellow card","red card","referee","VAR","penalty","free kick","corner","offside","league","fixture","season","standings","stadium","crowd","home","away","host","opponent","broadcast","commentary","highlight","understand","support","rival","derby","champion","promotion","relegation","injury","substitute","extra time","halftime","full time","possession","attack","defense","chance","pressure","momentum","equalizer","winner","starting lineup","substitution","post","bar","net","celebrate","disappointed","excited","confident","dominant","nervous","surprise","deserve","deserved","unfortunately","fortunately","last night","while","when","after","before","because","although"], resources:"Sky Sports Premier League; BBC Match of the Day; The Guardian Football Weekly", activity:"Assista aos melhores momentos e narre o jogo em ingles enquanto revisa."},
+      {title:"Prospeccao: cold call e e-mail", grammar:"Modals and polite requests", vocab:["prospect","lead","pipeline","quota","opportunity","deal","account","buyer","decision maker","stakeholder","pain point","need","problem","challenge","priority","solution","benefit","value","pricing","budget","timeline","demo","trial","call","meeting","appointment","follow up","reply","outreach","sequence","message","subject","intro","discovery","question","qualification","objection","budget issue","not interested","send information","later","next week","available","calendar","book","schedule","confirm","cancel","reschedule","resend","reply","proposal","contract","close","sales cycle","qualified","unqualified","target","enterprise","SME","communication","messaging","SMS","RCS","platform","API","integration","analytics","metrics","dashboard","manage","send","track","report","customer","user","engagement","conversion","renewal","competitor","alternative","feature","support","secure","compliant","would","could","may","might","can","should","please","if","whether","by","during","through","brief","concise","clear","professional","warm","polite","polite follow-up","touch base","reach out","keep in touch","take care"], resources:"Salesman Podcasts; SDR Nation; Gong; LinkedIn posts de BDR/SDR", activity:"Faca um cold call de cinco minutos com o chatbot e corrija o roteiro por escrito."}
+    ];
+    const dayNames=["Seg","Ter","Qua","Qui","Sex","Sab","Dom"];
+    const dayPlans=[
+      ["Listening","1 video curto com legenda em ingles","YouTube/BBC","15"],
+      ["Leitura","Leia um texto curto do tema","BBC/Guardian","10"],
+      ["Shadowing","Repita trechos de 30-60 segundos","Recurso do dia","10"],
+      ["Escrita","Escreva cinco frases com vocabulario novo","Anotacoes","12"],
+      ["Roleplay","Simule uma situacao real","English Coach","15"],
+      ["Imersao leve","Musica, futebol ou culinaria","Seu barril","10"],
+      ["Revisao","Revise erros e adicione frases ao Anki","Anki","8"]
+    ];
+    const app=document.querySelector("#app");
+    weeks.forEach((week,wi)=>{
+      const el=document.createElement("details");
+      el.className="week"; el.open=wi===0;
+      el.innerHTML=`<summary><div class="week-badge">${wi+1}</div><div class="week-title"><h2>Semana ${wi+1}: ${week.title}</h2><p>${week.grammar} · ${week.vocab.length} palavras</p></div><span class="chevron">⌄</span></summary>
+        <div class="week-body">
+          <div class="overview">
+            <div class="box"><h3>Gramatica</h3><p>${week.grammar}</p></div>
+            <div class="box"><h3>Atividade da semana</h3><p>${week.activity}</p></div>
+            <div class="box" style="grid-column:1/-1"><h3>Vocabulario (${week.vocab.length})</h3><div class="vocab">${week.vocab.join(" · ")}</div></div>
+            <div class="box" style="grid-column:1/-1"><h3>Recursos</h3><p>${week.resources}</p></div>
+          </div>
+          <div class="days">${dayNames.map((name,di)=>`<div class="day" data-id="w${wi}-d${di}">
+            <button class="day-head" type="button">${name}</button>
+            <div class="day-details"><strong>Hoje:</strong>${dayPlans[di][1]}<strong>Recurso:</strong>${dayPlans[di][2]}<strong>Tempo:</strong>${dayPlans[di][3]} min<button class="complete" type="button">Marcar concluido</button></div>
+          </div>`).join("")}</div>
+        </div>`;
+      app.appendChild(el);
+    });
+    const saved=JSON.parse(localStorage.getItem("englishCoachProgress")||"{}");
+    document.querySelectorAll(".day").forEach(day=>{
+      const id=day.dataset.id;
+      if(saved[id]) day.classList.add("done");
+      day.querySelector(".day-head").addEventListener("click",()=>day.classList.toggle("open"));
+      day.querySelector(".complete").addEventListener("click",()=>{
+        day.classList.toggle("done");
+        saved[id]=day.classList.contains("done");
+        localStorage.setItem("englishCoachProgress",JSON.stringify(saved));
+        updateProgress();
+      });
+    });
+    function updateProgress(){
+      const count=document.querySelectorAll(".day.done").length;
+      document.querySelector("#progress").value=count;
+      document.querySelector("#percent").textContent=Math.round(count/28*100)+"%";
+    }
+    updateProgress();
+  </script>
+</body>
+</html>

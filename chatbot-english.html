@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>English Coach</title>
+  <style>
+    :root{--ink:#172033;--muted:#69738c;--brand:#635bff;--bg:#f4f6fb;--card:#fff;--line:#dde3ef;--good:#16794a;--bad:#bd2c42}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+    header{max-width:960px;margin:auto;padding:20px 16px 10px;display:flex;align-items:center;justify-content:space-between}
+    h1{margin:0} .tabs{display:flex;gap:8px} button,input,select{font:inherit}
+    main{max-width:960px;margin:auto;padding:10px 16px 40px}
+    .tab{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px;cursor:pointer;font-weight:800}
+    .tab.active{background:var(--brand);border-color:var(--brand);color:#fff}
+    .panel{display:none}.panel.active{display:block}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 8px 24px rgba(23,32,51,.05)}
+    #messages{height:430px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:4px}
+    .message{max-width:82%;padding:12px 14px;border-radius:14px;line-height:1.5}.user{align-self:flex-end;background:#ececff}.bot{align-self:flex-start;background:#eef7f5}
+    .controls{display:flex;gap:8px;margin-top:12px}.controls input,.controls select{border:1px solid var(--line);border-radius:10px;padding:11px}
+    .controls input{flex:1}.icon{width:46px}.send{border:0;border-radius:10px;background:var(--brand);color:#fff;padding:10px 16px;font-weight:800}
+    .settings{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.settings select{border:1px solid var(--line);border-radius:9px;padding:8px}
+    .feedback{margin-top:10px;padding:12px;border-radius:10px;background:#f8f9fd;color:var(--muted)}
+    .prompt{font-size:clamp(20px,4vw,32px);line-height:1.35;margin:20px 0}
+    .row{display:flex;gap:8px}.row input{flex:1;border:1px solid var(--line);border-radius:10px;padding:12px}
+    .good{color:var(--good)}.bad{color:var(--bad)}.chip{display:inline-block;margin:3px;padding:5px 8px;border-radius:999px;background:#eef0f7}
+    .score{font-size:22px;font-weight:900}
+    @media(max-width:620px){header{align-items:flex-start;gap:12px}.tabs{flex-wrap:wrap}#messages{height:380px}.message{max-width:92%}}
+  </style>
+</head>
+<body>
+  <header><h1>English Coach</h1><div class="tabs"><button class="tab active" data-tab="conversation">Conversa</button><button class="tab" data-tab="dictation">Ditado</button><button class="tab" data-tab="pronunciation">Pronuncia</button></div></header>
+  <main>
+    <section class="panel active" id="conversation">
+      <div class="card">
+        <div class="settings">
+          <select id="scenario"><option value="free">Conversa livre</option><option value="coldcall">Cold call - BDR</option><option value="restaurant">Restaurante em Londres</option><option value="football">Futebol no pub</option><option value="correction">Correcao de texto</option></select>
+          <select id="accent"><option value="en-US">Sotaque US</option><option value="en-GB">Sotaque UK</option></select>
+          <select id="speed"><option value=".75">Voz devagar</option><option value=".9" selected>Voz normal</option><option value="1.15">Voz rapida</option></select>
+        </div>
+        <div id="messages" aria-live="polite"></div>
+        <div class="controls"><input id="chatInput" placeholder="Type or speak in English..." autocomplete="off"><button class="icon" id="mic" title="Usar microfone">🎤</button><button class="send" id="send">Enviar</button></div>
+        <div class="feedback" id="chatFeedback">Escreva ou fale em ingles. O tutor respondera em ingles simples e apontara melhorias em portugues.</div>
+      </div>
+    </section>
+    <section class="panel" id="dictation">
+      <div class="card">
+        <div class="settings"><select id="dictTopic"><option value="sales">Vendas</option><option value="football">Futebol</option><option value="cooking">Culinaria</option><option value="music">Musica</option></select><button class="tab" id="newDictation">Nova frase</button><button class="tab" id="playDictation">Ouvir</button><button class="tab" id="slowDictation">Ouvir devagar</button></div>
+        <p>Clique em ouvir e escreva o que entendeu:</p>
+        <div class="row"><input id="dictInput" placeholder="I heard..."><button class="send" id="checkDictation">Verificar</button></div>
+        <div class="feedback" id="dictResult"></div>
+      </div>
+    </section>
+    <section class="panel" id="pronunciation">
+      <div class="card">
+        <p>Ouça a frase, depois leia em voz alta:</p>
+        <div class="prompt" id="pronPrompt"></div>
+        <div class="row"><button class="send" id="playPronunciation">Ouvir modelo</button><button class="send" id="recordPronunciation">🎤 Ler em voz alta</button></div>
+        <div class="feedback" id="pronResult"></div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const $=s=>document.querySelector(s);
+    document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+      if(!t.dataset.tab)return;
+      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+      t.classList.add("active"); $("#"+t.dataset.tab).classList.add("active");
+    }));
+
+    function addMessage(text,type){
+      const el=document.createElement("div"); el.className="message "+type; el.textContent=text;
+      $("#messages").appendChild(el); $("#messages").scrollTop=$("#messages").scrollHeight;
+    }
+    function speak(text,slow=false){
+      if(!("speechSynthesis" in window)){alert("Seu navegador nao suporta sintese de voz.");return;}
+      speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(text);
+      u.lang=$("#accent").value; u.rate=slow?.55:Number($("#speed").value);
+      speechSynthesis.speak(u);
+    }
+    const responses={
+      free:["That sounds interesting. Tell me a little more about it.","Why do you enjoy that?","How does it affect your work or daily life?"],
+      coldcall:["Hello, am I speaking with the person responsible for your company's communication channels?","I noticed that your team may need better customer communication. Are you currently using SMS or RCS?","One concern I hear often is cost. Would you like to understand how to measure the return?"],
+      restaurant:["Good evening. Are you ready to order?","Would you like to see the menu or ask for a recommendation?","How would you like that cooked?"],
+      football:["That was a great match. What did you think of the first half?","Which team do you support, and why?","Do you think the referee made the right decision?"],
+      correction:["Thank you. Let's improve it step by step.","Try to use one complete sentence and check the preposition."]
+    };
+    let turn=0;
+    function botReply(user){
+      const scenario=$("#scenario").value;
+      if(scenario==="correction") return `I understood your message: "${user}".\n\n${correctText(user)}`;
+      const options=responses[scenario]; return options[turn++%options.length];
+    }
+    function correctText(text){
+      const rules=[
+        [/qualificated/gi,"qualified"],[/ on they /gi," to their "],[/\bgot too\b/gi,"also have"],[/sends e adm/gi,"sends and manages"],
+        [/^i /gm,"I "],[/\bim\b/gi,"I'm"],[/happy for/gi,"happy that"],[/\bmeasures\b/gi,"metrics"],[/\bchanel/gi,"channel"]
+      ];
+      let corrected=text;
+      rules.forEach(([re,repl])=>corrected=corrected.replace(re,repl));
+      if(corrected===text) return "Good structure. Check word order, prepositions and whether each verb agrees with the subject.";
+      return "A more natural version could be: "+corrected;
+    }
+    addMessage("Hello! Choose a scenario and start in English.","bot");
+    $("#send").addEventListener("click",()=>{
+      const input=$("#chatInput"); const text=input.value.trim(); if(!text)return;
+      addMessage(text,"user"); const reply=botReply(text); addMessage(reply,"bot");
+      $("#chatFeedback").textContent=feedbackFor(text);
+      speak(reply); input.value="";
+    });
+    $("#chatInput").addEventListener("keydown",e=>{if(e.key==="Enter")$("#send").click();});
+    function feedbackFor(text){
+      const errors=[]; if(/^i /i.test(text))errors.push("Use maiuscula em I."); if(/\bon they\b/i.test(text))errors.push("Use 'to their', nao 'on they'.");
+      if(/\btoo\b/i.test(text))errors.push("Revise a posicao de 'too' e 'also'."); if(errors.length)return "Correcoes: "+errors.join(" ");
+      return "Boa tentativa. Use frases completas e check collocations como 'follow up', 'set a meeting' e 'reach out to a prospect'.";
+    }
+
+    const phrases={
+      sales:["Could you tell me a little more about your communication needs?","I can send you a short summary after the call.","We help companies improve customer engagement with RCS and SMS.","Would next Tuesday at ten in the morning work for you?"],
+      football:["Ceara won the match because they played with confidence.","The crowd was loud when the second goal went in.","The referee reviewed the incident after the VAR check."],
+      cooking:["I need to chop the onions and heat the pan.","This recipe takes twenty minutes and serves four people.","Could you add a little salt and fresh pepper?"],
+      music:["The singer combines traditional rhythms with modern sounds.","I liked the song because the melody was simple and memorable.","The new album mixes African and British influences."]
+    };
+    let dictation="";
+    function newDictation(){
+      const list=phrases[$("#dictTopic").value]; dictation=list[Math.floor(Math.random()*list.length)];
+      $("#dictResult").innerHTML="Frase pronta. Clique em <strong>Ouvir</strong>.";
+    }
+    function normalize(s){return s.toLowerCase().replace(/[.,!?]/g,"").replace(/\s+/g," ").trim();}
+    function words(s){return normalize(s).split(" ").filter(Boolean);}
+    $("#newDictation").addEventListener("click",newDictation);
+    $("#playDictation").addEventListener("click",()=>speak(dictation,false)); $("#slowDictation").addEventListener("click",()=>speak(dictation,true));
+    $("#checkDictation").addEventListener("click",()=>{
+      if(!dictation)return newDictation();
+      const answer=normalize($("#dictInput").value), target=normalize(dictation);
+      if(!answer){$("#dictResult").textContent="Digite sua resposta primeiro.";return;}
+      const expected=words(target), got=words(answer); const matched=expected.filter(w=>got.includes(w)).length;
+      const percent=Math.round(matched/expected.length*100);
+      const markup=got.map(w=>expected.includes(w)?`<span class="good">${w}</span>`:`<span class="bad">${w}</span>`).join(" ");
+      $("#dictResult").innerHTML=`<div class="score">${percent}% de acerto</div><div>${markup}</div><strong>Frase correta:</strong> ${dictation}<br><strong>Traducao:</strong> ${translations[dictation]||"Compare as palavras e o contexto da frase."}`;
+    });
+    const translations={
+      "Could you tell me a little more about your communication needs?":"Voce poderia me contar um pouco mais sobre suas necessidades de comunicacao?",
+      "I can send you a short summary after the call.":"Posso enviar um breve resumo depois da ligacao.",
+      "We help companies improve customer engagement with RCS and SMS.":"Ajudamos empresas a melhorar o engajamento dos clientes com RCS e SMS.",
+      "Would next Tuesday at ten in the morning work for you?":"A proxima terca-feira, as dez da manha, seria bom para voce?",
+      "Ceara won the match because they played with confidence.":"O Ceara venceu a partida porque jogou com confianca.",
+      "The crowd was loud when the second goal went in.":"A torcida ficou alta quando o segundo gol entrou.",
+      "The referee reviewed the incident after the VAR check.":"O arbitro revisou o lance depois da verificacao do VAR.",
+      "I need to chop the onions and heat the pan.":"Preciso picar as cebolas e aquecer a frigideira.",
+      "This recipe takes twenty minutes and serves four people.":"Esta receita leva vinte minutos e serve quatro pessoas.",
+      "Could you add a little salt and fresh pepper?":"Voce poderia adicionar um pouco de sal e pimenta fresca?",
+      "The singer combines traditional rhythms with modern sounds.":"O cantor combina ritmos tradicionais com sons modernos.",
+      "I liked the song because the melody was simple and memorable.":"Eu gostei da musica porque a melodia era simples e memoravel.",
+      "The new album mixes African and British influences.":"O novo album mistura influencias africanas e britanicas."
+    };
+
+    const pronPrompts=["I prospect companies that need better communication channels.","We send RCS and SMS messages to engage customers.","Could we schedule a short meeting next week?","Ceara won the match, and the fans celebrated.","I would like to improve my listening and speaking."];
+    let pronIndex=0;
+    function showPron(){ $("#pronPrompt").textContent=pronPrompts[pronIndex]; $("#pronResult").textContent=""; }
+    showPron(); newDictation();
+    $("#playPronunciation").addEventListener("click",()=>speak($("#pronPrompt").textContent));
+    $("#recordPronunciation").addEventListener("click",()=>{
+      const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+      if(!SR){$("#pronResult").textContent="Reconhecimento de voz indisponivel neste navegador. Use Chrome ou Edge.";return;}
+      const rec=new SR(); rec.lang="en-US"; rec.interimResults=false;
+      rec.onresult=e=>{
+        const heard=e.results[0][0].transcript; const target=pronPrompts[pronIndex];
+        const expected=words(target), got=words(heard); const matched=expected.filter(w=>got.includes(w)).length;
+        const percent=Math.round(matched/expected.length*100);
+        $("#pronResult").innerHTML=`<div class="score">${percent}% reconhecido</div><strong>Voce disse:</strong> ${heard}<br><strong>Modelo:</strong> ${target}<br>Palavras nao reconhecidas: ${expected.filter(w=>!got.includes(w)).map(w=>`<span class="chip bad">${w}</span>`).join("")||"nenhuma"}`;
+        pronIndex=(pronIndex+1)%pronPrompts.length;
+      };
+      rec.onerror=()=>{$("#pronResult").textContent="Nao consegui ouvir. Verifique a permissao do microfone e tente novamente.";};
+      rec.start();
+    });
+    $("#mic").addEventListener("click",()=>{
+      const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+      if(!SR){$("#chatFeedback").textContent="Reconhecimento de voz indisponivel. Use Chrome ou Edge.";return;}
+      const rec=new SR(); rec.lang="en-US"; rec.interimResults=false;
+      rec.onresult=e=>{$("#chatInput").value=e.results[0][0].transcript;$("#send").click();};
+      rec.onerror=()=>{$("#chatFeedback").textContent="Nao consegui ouvir. Verifique a permissao do microfone.";};
+      rec.start();
+    });
+  </script>
+</body>
+</html>
