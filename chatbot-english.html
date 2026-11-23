@@ -121,7 +121,8 @@ Use UK English when teaching vocabulary or culture.`;
       const models=["gemini-2.5-flash","gemini-2.0-flash"];
       let lastError="Servico da Gemini indisponivel.";
 
-      for(const model of models){
+      for(let modelIndex=0;modelIndex<models.length;modelIndex++){
+        const model=models[modelIndex];
         const modelUrl=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
         for(let attempt=1;attempt<=3;attempt++){
           try{
@@ -169,7 +170,9 @@ Use UK English when teaching vocabulary or culture.`;
             }
           }
         }
-        $("#chatFeedback").textContent=`Tentando modelo alternativo ${model}...`;
+        if(modelIndex<models.length-1){
+          $("#chatFeedback").textContent=`Tentando modelo alternativo ${models[modelIndex+1]}...`;
+        }
       }
       chatHistory.pop();
       return `Nao consegui conectar a Gemini: ${lastError}`;
