@@ -24,6 +24,8 @@
     .row{display:flex;gap:8px}.row input{flex:1;border:1px solid var(--line);border-radius:10px;padding:12px}
     .good{color:var(--good)}.bad{color:var(--bad)}.chip{display:inline-block;margin:3px;padding:5px 8px;border-radius:999px;background:#eef0f7}
     .score{font-size:22px;font-weight:900}
+    .api-key{max-width:280px}
+    .key-status{font-size:12px;color:var(--muted)}
     @media(max-width:620px){header{align-items:flex-start;gap:12px}.tabs{flex-wrap:wrap}#messages{height:380px}.message{max-width:92%}}
   </style>
 </head>
@@ -36,6 +38,9 @@
           <select id="scenario"><option value="free">Conversa livre</option><option value="coldcall">Cold call - BDR</option><option value="restaurant">Restaurante em Londres</option><option value="football">Futebol no pub</option><option value="correction">Correcao de texto</option></select>
           <select id="accent"><option value="en-US">Sotaque US</option><option value="en-GB">Sotaque UK</option></select>
           <select id="speed"><option value=".75">Voz devagar</option><option value=".9" selected>Voz normal</option><option value="1.15">Voz rapida</option></select>
+          <input class="api-key" id="geminiKey" type="password" placeholder="Gemini API key" autocomplete="off" aria-label="Gemini API key">
+          <button class="tab" id="saveGeminiKey" type="button">Conectar Gemini</button>
+          <span class="key-status" id="keyStatus"></span>
         </div>
         <div id="messages" aria-live="polite"></div>
         <div class="controls"><input id="chatInput" placeholder="Type or speak in English..." autocomplete="off"><button class="icon" id="mic" title="Usar microfone">🎤</button><button class="send" id="send">Enviar</button></div>
@@ -79,18 +84,66 @@
       u.lang=$("#accent").value; u.rate=slow?.55:Number($("#speed").value);
       speechSynthesis.speak(u);
     }
-    const responses={
-      free:["That sounds interesting. Tell me a little more about it.","Why do you enjoy that?","How does it affect your work or daily life?"],
-      coldcall:["Hello, am I speaking with the person responsible for your company's communication channels?","I noticed that your team may need better customer communication. Are you currently using SMS or RCS?","One concern I hear often is cost. Would you like to understand how to measure the return?"],
-      restaurant:["Good evening. Are you ready to order?","Would you like to see the menu or ask for a recommendation?","How would you like that cooked?"],
-      football:["That was a great match. What did you think of the first half?","Which team do you support, and why?","Do you think the referee made the right decision?"],
-      correction:["Thank you. Let's improve it step by step.","Try to use one complete sentence and check the preposition."]
+    const chatHistory=[];
+    const scenarioInstructions={
+      free:"Have a natural conversation about the learner's interests.",
+      coldcall:"Role-play a BDR cold call. Respond as a prospect and introduce realistic objections.",
+      restaurant:"Role-play a conversation in a London restaurant.",
+      football:"Discuss football with a British supporter.",
+      correction:"Correct the learner's English and explain mistakes in Portuguese."
     };
-    let turn=0;
-    function botReply(user){
+    function updateKeyStatus(){
+      const connected=Boolean(localStorage.getItem("englishCoachGeminiKey"));
+      $("#keyStatus").textContent=connected?"Gemini conectada neste navegador":"Gemini nao conectada";
+    }
+    $("#saveGeminiKey").addEventListener("click",()=>{
+      const key=$("#geminiKey").value.trim();
+      if(!key){$("#chatFeedback").textContent="Cole sua chave da Gemini API para conectar.";return;}
+      localStorage.setItem("englishCoachGeminiKey",key);
+      $("#geminiKey").value="";
+      updateKeyStatus();
+      $("#chatFeedback").textContent="Gemini conectada. A chave fica salva apenas neste navegador.";
+    });
+    updateKeyStatus();
+
+    async function botReply(user){
+      const key=localStorage.getItem("englishCoachGeminiKey");
+      if(!key) return "Conecte sua Gemini API key acima para conversar com o modelo.";
+
       const scenario=$("#scenario").value;
-      if(scenario==="correction") return `I understood your message: "${user}".\n\n${correctText(user)}`;
-      const options=responses[scenario]; return options[turn++%options.length];
+      chatHistory.push({role:"user",parts:[{text:user}]});
+      const systemInstruction=`You are an English tutor for a Brazilian learner at B1 level.
+The learner works as a BDR in technology and has listening difficulties.
+Scenario: ${scenarioInstructions[scenario]}
+Speak mostly in clear B1 English, ask only one question at the end, and keep replies short.
+After the English response, add a section in Portuguese titled "Correcao" with concise corrections, if applicable.
+Use UK English when teaching vocabulary or culture.`;
+      try{
+        const response=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",{
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json",
+            "x-goog-api-key":key
+          },
+          body:JSON.stringify({
+            systemInstruction:{parts:[{text:systemInstruction}]},
+            contents:chatHistory,
+            generationConfig:{temperature:.7,maxOutputTokens:450}
+          })
+        });
+        if(!response.ok){
+          const error=await response.json().catch(()=>null);
+          throw new Error(error?.error?.message||`Gemini request failed (${response.status})`);
+        }
+        const data=await response.json();
+        const reply=data.candidates?.[0]?.content?.parts?.map(part=>part.text||"").join("").trim();
+        if(!reply) throw new Error("Gemini returned an empty response.");
+        chatHistory.push({role:"model",parts:[{text:reply}]});
+        return reply;
+      }catch(error){
+        chatHistory.pop();
+        return `Nao consegui conectar a Gemini: ${error.message}`;
+      }
     }
     function correctText(text){
       const rules=[
@@ -103,11 +156,15 @@
       return "A more natural version could be: "+corrected;
     }
     addMessage("Hello! Choose a scenario and start in English.","bot");
-    $("#send").addEventListener("click",()=>{
+    $("#send").addEventListener("click",async ()=>{
       const input=$("#chatInput"); const text=input.value.trim(); if(!text)return;
-      addMessage(text,"user"); const reply=botReply(text); addMessage(reply,"bot");
+      addMessage(text,"user"); input.value="";
+      $("#send").disabled=true;
+      $("#chatFeedback").textContent="Gemini esta formulando a resposta...";
+      const reply=await botReply(text); addMessage(reply,"bot");
       $("#chatFeedback").textContent=feedbackFor(text);
       speak(reply); input.value="";
+      $("#send").disabled=false;
     });
     $("#chatInput").addEventListener("keydown",e=>{if(e.key==="Enter")$("#send").click();});
     function feedbackFor(text){
