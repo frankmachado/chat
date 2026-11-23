@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>English Coach</title>
+  <style>
+    :root { --ink:#172033; --muted:#69738c; --brand:#635bff; --mint:#13a9a1; --bg:#f4f6fb; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px; font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:linear-gradient(135deg,#f4f6fb,#eef2ff); }
+    main { width:min(760px,100%); }
+    h1 { margin:0 0 8px; font-size:clamp(36px,8vw,64px); }
+    p { margin:0 0 28px; color:var(--muted); font-size:18px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    a { min-height:180px; display:flex; flex-direction:column; justify-content:space-between; padding:24px; border:1px solid #dde3ef; border-radius:18px; background:white; color:var(--ink); text-decoration:none; box-shadow:0 12px 30px rgba(23,32,51,.08); transition:.15s; }
+    a:hover { transform:translateY(-3px); border-color:var(--brand); }
+    .label { color:var(--brand); font-size:13px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+    strong { font-size:23px; }
+    @media(max-width:620px) { .grid { grid-template-columns:1fr; } a { min-height:140px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>English Coach</h1>
+    <p>Seu treino de ingles com roteiro semanal e pratica de conversa.</p>
+    <div class="grid">
+      <a href="./roteiro-ingles.html">
+        <span class="label">Mes 1</span>
+        <strong>Roteiro interativo</strong>
+        <span>4 semanas · 28 dias · progresso salvo</span>
+      </a>
+      <a href="./chatbot-english.html">
+        <span class="label">Pratica</span>
+        <strong>Chatbot English Coach</strong>
+        <span>Conversa · ditado · pronuncia</span>
+      </a>
+    </div>
+  </main>
+</body>
+</html>
